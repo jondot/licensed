@@ -1,10 +1,13 @@
 extern crate chrono;
-#[macro_use] extern crate failure;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate log;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 extern crate ring;
+extern crate serde_json;
 extern crate untrusted;
 
 use std::str;
@@ -21,7 +24,10 @@ mod tests {
         let license = License::new(b"test").with_public_key(b"a").build();
         match license {
             Ok(_) => unreachable!(),
-            Err(e) => assert_eq!(e.downcast::<LicenseError>().unwrap(), LicenseError::MissingSignature)
+            Err(e) => assert_eq!(
+                e.downcast::<LicenseError>().unwrap(),
+                LicenseError::MissingSignature
+            ),
         }
     }
 
@@ -30,16 +36,24 @@ mod tests {
         let license = License::new(b"test").build();
         match license {
             Ok(_) => unreachable!(),
-            Err(e) => assert_eq!(e.downcast::<LicenseError>().unwrap(), LicenseError::MissingPublicKey)
+            Err(e) => assert_eq!(
+                e.downcast::<LicenseError>().unwrap(),
+                LicenseError::MissingPublicKey
+            ),
         }
     }
 
     #[test]
     fn it_fails_with_missing_text() {
-        let builder = LicenseBuilder::default().with_public_key(&[0x08]).with_signature(&[0x08]);
+        let builder = LicenseBuilder::default()
+            .with_public_key(&[0x08])
+            .with_signature(&[0x08]);
         match builder.build() {
             Ok(_) => unreachable!(),
-            Err(e) => assert_eq!(e.downcast::<LicenseError>().unwrap(), LicenseError::MissingLicenseText)
+            Err(e) => assert_eq!(
+                e.downcast::<LicenseError>().unwrap(),
+                LicenseError::MissingLicenseText
+            ),
         }
     }
 
@@ -48,7 +62,10 @@ mod tests {
         let license = include_bytes!("../examples/license");
         let public_key = include_bytes!("../examples/public.pks");
 
-        let license = License::new(license).with_public_key(public_key).build().unwrap();
+        let license = License::new(license)
+            .with_public_key(public_key)
+            .build()
+            .unwrap();
         assert!(license.valid());
     }
 }
@@ -76,7 +93,6 @@ pub struct LicenseBuilder<'a> {
     public_key: Option<&'a [u8]>,
     signature: Option<&'a [u8]>,
 }
-
 
 impl<'a> LicenseBuilder<'a> {
     pub fn with_signature(mut self, signature: &'a [u8]) -> Self {
@@ -110,9 +126,7 @@ impl<'a> LicenseBuilder<'a> {
         let pub_key = untrusted::Input::from(public_key);
 
         let valid_signature = match signature::verify(&signature::ED25519, pub_key, msg, sig) {
-            Ok(_) => {
-                true
-            },
+            Ok(_) => true,
             Err(e) => {
                 debug!("Erorr validating: {:?}", e);
                 false
@@ -144,12 +158,14 @@ impl<'a> LicenseBuilder<'a> {
 pub struct License {
     features: Vec<String>,
     expires: Option<DateTime<Utc>>,
-    #[serde(default="false_f")]
+    #[serde(default = "false_f")]
     signature_valid: bool,
 }
 
 #[inline(always)]
-fn false_f() -> bool { false }
+fn false_f() -> bool {
+    false
+}
 
 impl License {
     /// Creates a new builder for the license, helping to construct and
@@ -175,7 +191,7 @@ impl License {
                     lb.text = Some(text);
                 }
                 lb.signature = Some(&sig[1..]);
-            },
+            }
             None => {}
         }
 
@@ -197,15 +213,15 @@ impl License {
     /// # }
     /// ```
     pub fn valid(&self) -> bool {
-        if ! self.signature_valid {
+        if !self.signature_valid {
             return false;
         }
         if let Some(expires) = self.expires {
-            if expires > Utc::now() {
+            if expires < Utc::now() {
                 return false;
             }
         }
-        return true
+        return true;
     }
 
     /// Does this license have the specified feature?
